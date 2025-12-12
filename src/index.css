@@ -51,7 +51,7 @@
   .btn-primary {
     @apply bg-gradient-to-r from-primary to-cyan-600 hover:from-primary-hover 
            hover:to-cyan-700 text-white focus:ring-primary/50 
-           shadow-lg hover:shadow-xl hover:shadow-primary/20 rounded-lg;
+           shadow-lg hover:shadow-xl hover:shadow-primary/20 rounded-lg py-2;
   }
   
   .btn-secondary {
