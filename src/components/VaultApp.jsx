@@ -318,7 +318,7 @@ export const VaultApp = ({
                                         {credentials.length === 0 && (
                                             <button
                                                 onClick={handleAddCredential}
-                                                className="btn-primary mt-4"
+                                                className="btn-primary mt-4 px-5 py-2 hover:shadow-lg transition-all duration-200"
                                             >
                                                 + Add Your First Credential
                                             </button>
