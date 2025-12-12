@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { StorageManager, SecurityManager } from './utils/encryption';
 import { LockScreen } from './components/LockScreen';
 import { VaultApp } from './components/VaultApp';
-// import './index.css';
 
 function App() {
   const [isUnlocked, setIsUnlocked] = useState(false);

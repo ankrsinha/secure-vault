@@ -51,12 +51,12 @@
   .btn-primary {
     @apply bg-gradient-to-r from-primary to-cyan-600 hover:from-primary-hover 
            hover:to-cyan-700 text-white focus:ring-primary/50 
-           shadow-lg hover:shadow-xl hover:shadow-primary/20;
+           shadow-lg hover:shadow-xl hover:shadow-primary/20 rounded-lg;
   }
   
   .btn-secondary {
     @apply bg-gray-800/70 hover:bg-gray-700/70 text-gray-200 border border-gray-700 
-           focus:ring-gray-600 hover:border-gray-600;
+           focus:ring-gray-600 hover:border-gray-600 py-2 rounded-lg;
   }
   
   .btn-danger {
