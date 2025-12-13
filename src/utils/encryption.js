@@ -70,6 +70,16 @@ export const SecurityManager = {
             throw new Error('Invalid master password or corrupted data');
         }
     },
+    
+    // Helper function for decrypting backup data (with better error handling)
+    decryptData: (encryptedContent, masterPassword) => {
+        try {
+            const backupData = JSON.parse(encryptedContent);
+            return SecurityManager.decrypt(backupData, masterPassword);
+        } catch (error) {
+            throw new Error('Failed to decrypt backup data: ' + error.message);
+        }
+    }
 };
 
 export const StorageManager = {
@@ -204,7 +214,7 @@ export const StorageManager = {
         }
     },
 
-    restoreFromBackup: (file, masterPassword) => {
+    restoreFromBackup: (file, masterPassword, existingCredentials = []) => {
         return new Promise((resolve, reject) => {
             if (!file) {
                 reject(new Error('No file selected'));
@@ -233,15 +243,20 @@ export const StorageManager = {
                             return;
                         }
 
-                        resolve(decrypted);
+                        // Merge with existing credentials if provided
+                        if (existingCredentials && existingCredentials.length > 0) {
+                            const merged = StorageManager.mergeCredentials(existingCredentials, decrypted);
+                            resolve(merged);
+                        } else {
+                            resolve(decrypted);
+                        }
                     } else if (backupData.credentials && Array.isArray(backupData.credentials)) {
                         // Plain export - just use the credentials (will have no passwords)
-                        // We need to prompt user to add passwords back
-                        const credentials = backupData.credentials.map(cred => ({
+                        const plainCredentials = backupData.credentials.map(cred => ({
                             ...cred,
                             password: '', // Empty password - user needs to fill these
-                            // Or we could generate placeholder text
-                            // password: '[PASSWORD NOT INCLUDED IN EXPORT]'
+                            // Generate a new ID to avoid conflicts
+                            id: cred.id || Date.now().toString() + Math.random().toString(36).substr(2, 9)
                         }));
 
                         if (confirm(
@@ -249,12 +264,36 @@ export const StorageManager = {
                             'You will need to manually re-enter passwords for each credential.\n\n' +
                             'Do you want to continue?'
                         )) {
-                            resolve(credentials);
+                            // Merge with existing credentials if provided
+                            if (existingCredentials && existingCredentials.length > 0) {
+                                const merged = StorageManager.mergeCredentials(existingCredentials, plainCredentials);
+                                resolve(merged);
+                            } else {
+                                resolve(plainCredentials);
+                            }
                         } else {
                             reject(new Error('Import cancelled by user'));
                         }
                     } else {
-                        reject(new Error('Invalid backup file format'));
+                        // Try to parse as direct credentials array
+                        if (Array.isArray(backupData)) {
+                            // Direct credentials array
+                            const credentials = backupData.map(cred => ({
+                                ...cred,
+                                // Ensure IDs are unique
+                                id: cred.id || Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                            }));
+
+                            // Merge with existing credentials if provided
+                            if (existingCredentials && existingCredentials.length > 0) {
+                                const merged = StorageManager.mergeCredentials(existingCredentials, credentials);
+                                resolve(merged);
+                            } else {
+                                resolve(credentials);
+                            }
+                        } else {
+                            reject(new Error('Invalid backup file format'));
+                        }
                     }
                 } catch (error) {
                     console.error('Restore error:', error);
@@ -273,6 +312,52 @@ export const StorageManager = {
 
             reader.readAsText(file);
         });
+    },
+
+    // Merge credentials intelligently (appends new ones, avoids duplicates)
+    mergeCredentials: (existingCreds, newCreds) => {
+        if (!Array.isArray(existingCreds) || !Array.isArray(newCreds)) {
+            throw new Error('Both parameters must be arrays');
+        }
+
+        // If no existing credentials, just return all new ones
+        if (existingCreds.length === 0) {
+            return newCreds;
+        }
+
+        // Create a map of existing credentials for quick lookup
+        const existingMap = new Map();
+        existingCreds.forEach(cred => {
+            // Use a composite key for better duplicate detection
+            const key = `${cred.serviceName?.toLowerCase() || ''}-${cred.username?.toLowerCase() || ''}-${cred.category?.toLowerCase() || 'other'}`;
+            existingMap.set(key, cred);
+        });
+
+        // Filter new credentials to remove duplicates
+        const uniqueNewCreds = newCreds.filter(newCred => {
+            const key = `${newCred.serviceName?.toLowerCase() || ''}-${newCred.username?.toLowerCase() || ''}-${newCred.category?.toLowerCase() || 'other'}`;
+            return !existingMap.has(key);
+        });
+
+        // Ensure unique IDs
+        const mergedCreds = [...existingCreds];
+        uniqueNewCreds.forEach(cred => {
+            // Check for ID conflicts
+            const existingIds = new Set(existingCreds.map(c => c.id));
+            let newId = cred.id;
+            
+            // Generate new ID if there's a conflict
+            if (existingIds.has(newId)) {
+                newId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+            }
+            
+            mergedCreds.push({
+                ...cred,
+                id: newId
+            });
+        });
+
+        return mergedCreds;
     },
 
     // Optional: Export with passwords (for advanced users)

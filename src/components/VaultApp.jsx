@@ -4,6 +4,7 @@ import { StorageManager, SecurityManager } from '../utils/encryption';
 import { CredentialModal } from './CredentialModal';
 import { ViewModal } from './ViewModal';
 import { StatusMessage } from './StatusMessage';
+import { DeleteConfirmationModal } from './DeleteConfirmationModal'; // Import the new modal
 
 export const VaultApp = ({
     credentials,
@@ -18,6 +19,8 @@ export const VaultApp = ({
     const [selectedCredential, setSelectedCredential] = useState(null);
     const [editingId, setEditingId] = useState(null);
     const [status, setStatus] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [credentialToDelete, setCredentialToDelete] = useState(null);
 
     useEffect(() => {
         const filtered = credentials.filter(
@@ -71,16 +74,39 @@ export const VaultApp = ({
         setIsModalOpen(true);
     };
 
-    const handleDeleteCredential = () => {
-        if (!selectedCredential) return;
+    // Functions for delete confirmation
+    const handleDeleteFromGrid = (credential) => {
+        setCredentialToDelete(credential);
+        setShowDeleteModal(true);
+    };
 
-        if (confirm('Are you sure you want to delete this credential? This action cannot be undone.')) {
-            const updated = credentials.filter((c) => c.id !== selectedCredential.id);
-            onCredentialsChange(updated);
-            StorageManager.saveCredentials(updated);
+    const handleDeleteFromViewModal = () => {
+        if (!selectedCredential) return;
+        setCredentialToDelete(selectedCredential);
+        setShowDeleteModal(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (!credentialToDelete) return;
+
+        const updated = credentials.filter((c) => c.id !== credentialToDelete.id);
+        onCredentialsChange(updated);
+        StorageManager.saveCredentials(updated);
+        
+        // Close view modal if we're deleting the viewed credential
+        if (selectedCredential && selectedCredential.id === credentialToDelete.id) {
             setIsViewModalOpen(false);
-            setStatus({ text: 'Credential deleted', type: 'success' });
+            setSelectedCredential(null);
         }
+        
+        setStatus({ text: 'Credential deleted', type: 'success' });
+        setShowDeleteModal(false);
+        setCredentialToDelete(null);
+    };
+
+    const handleCancelDelete = () => {
+        setShowDeleteModal(false);
+        setCredentialToDelete(null);
     };
 
     const handleViewCredential = (credential) => {
@@ -93,10 +119,46 @@ export const VaultApp = ({
         setStatus({ text: 'Password copied to clipboard!', type: 'success' });
     };
 
+    const handleCopyBankCredential = (value, label) => {
+        navigator.clipboard.writeText(value);
+        setStatus({ text: `${label} copied to clipboard!`, type: 'success' });
+    };
+
     const handleCopyAll = () => {
         if (!selectedCredential) return;
-        const text = `${selectedCredential.serviceName}\nUsername: ${selectedCredential.username}\nPassword: ${selectedCredential.password}\n${selectedCredential.details ? 'Details: ' + selectedCredential.details : ''
-            }`;
+        
+        let text = `${selectedCredential.serviceName}\n`;
+        if (selectedCredential.username) {
+            text += `Username: ${selectedCredential.username}\n`;
+        }
+        if (selectedCredential.password) {
+            text += `Password: ${selectedCredential.password}\n`;
+        }
+        text += `Category: ${selectedCredential.category}\n`;
+        
+        // Add banking credentials if it's a bank credential
+        if (selectedCredential.category === 'Bank' && selectedCredential.bankCredentials) {
+            text += '\nBanking Credentials:\n';
+            selectedCredential.bankCredentials.forEach(cred => {
+                text += `  ${cred.label}: ${cred.value}\n`;
+            });
+        }
+        
+        // Add bank details if it's a bank credential
+        if (selectedCredential.category === 'Bank' && selectedCredential.bankDetails) {
+            text += '\nBank Details:\n';
+            Object.entries(selectedCredential.bankDetails).forEach(([key, value]) => {
+                if (value) {
+                    text += `  ${key}: ${value}\n`;
+                }
+            });
+        }
+        
+        // Add notes
+        if (selectedCredential.details) {
+            text += `\nNotes:\n${selectedCredential.details}\n`;
+        }
+        
         navigator.clipboard.writeText(text);
         setStatus({ text: 'Credential copied to clipboard!', type: 'success' });
     };
@@ -141,19 +203,33 @@ export const VaultApp = ({
             if (!file) return;
 
             try {
-                const restored = await StorageManager.restoreFromBackup(file, masterPassword);
-                onCredentialsChange(restored);
-                StorageManager.saveCredentials(restored);
+                const restored = await StorageManager.restoreFromBackup(file, masterPassword, credentials);
+                
+                const newCredentialCount = restored.length - credentials.length;
+                
+                if (newCredentialCount > 0) {
+                    onCredentialsChange(restored);
+                    StorageManager.saveCredentials(restored);
 
-                // Check if passwords are missing (plain export)
-                const hasMissingPasswords = restored.some(cred => !cred.password || cred.password === '');
-                if (hasMissingPasswords) {
-                    setStatus({
-                        text: 'Credentials restored. Note: Passwords were not included in the export and need to be re-entered.',
-                        type: 'warning'
-                    });
+                    const newCreds = restored.slice(credentials.length);
+                    const hasMissingPasswords = newCreds.some(cred => !cred.password || cred.password === '');
+                    
+                    if (hasMissingPasswords) {
+                        setStatus({
+                            text: `${newCredentialCount} new credential(s) added! Note: Some passwords were not included in the export and need to be re-entered.`,
+                            type: 'warning'
+                        });
+                    } else {
+                        setStatus({ 
+                            text: `${newCredentialCount} new credential(s) added to your vault!`, 
+                            type: 'success' 
+                        });
+                    }
                 } else {
-                    setStatus({ text: 'Credentials restored successfully!', type: 'success' });
+                    setStatus({ 
+                        text: 'No new credentials added. All credentials from the backup already exist in your vault.', 
+                        type: 'warning' 
+                    });
                 }
             } catch (error) {
                 setStatus({ text: error.message, type: 'error' });
@@ -342,12 +418,7 @@ export const VaultApp = ({
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (confirm('Delete this credential? This cannot be undone.')) {
-                                                    const updated = credentials.filter((c) => c.id !== cred.id);
-                                                    onCredentialsChange(updated);
-                                                    StorageManager.saveCredentials(updated);
-                                                    setStatus({ text: 'Credential deleted', type: 'success' });
-                                                }
+                                                handleDeleteFromGrid(cred);
                                             }}
                                             className="btn-danger btn-sm opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
                                         >
@@ -407,9 +478,18 @@ export const VaultApp = ({
                         setSelectedCredential(null);
                     }}
                     onEdit={() => handleEditCredential(selectedCredential)}
-                    onDelete={handleDeleteCredential}
+                    onDelete={handleDeleteFromViewModal}
                     onCopyAll={handleCopyAll}
                     onShowPassword={handleCopyPassword}
+                    onCopyBankCredential={handleCopyBankCredential}
+                />
+
+                {/* Delete Confirmation Modal */}
+                <DeleteConfirmationModal
+                    isOpen={showDeleteModal}
+                    credential={credentialToDelete}
+                    onConfirm={handleConfirmDelete}
+                    onCancel={handleCancelDelete}
                 />
             </div>
         </div>
