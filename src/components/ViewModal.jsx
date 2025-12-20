@@ -9,10 +9,15 @@ export const ViewModal = ({
   onDelete,
   onCopyAll,
   onShowPassword,
-  onCopyBankCredential, // Add this prop
+  onCopyBankCredential, 
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showBankCredentialValues, setShowBankCredentialValues] = useState({});
+  const [showBankDetails, setShowBankDetails] = useState({
+    cardNumber: false,
+    cvv: false,
+    accountNumber: false
+  });
 
   if (!isOpen || !credential) return null;
 
@@ -54,6 +59,86 @@ export const ViewModal = ({
         [index]: false
       }));
     }, 3000);
+  };
+
+  const toggleBankDetailVisibility = (field) => {
+    setShowBankDetails(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  const handleCopyBankDetail = (field, value, label) => {
+    if (!value) return;
+    
+    navigator.clipboard.writeText(value);
+    if (onCopyBankCredential) {
+      onCopyBankCredential(value, `${label} copied`);
+    }
+  };
+
+  const formatCardNumber = (cardNumber) => {
+    if (!cardNumber) return '';
+    // Remove any non-digit characters and format
+    const digits = cardNumber.replace(/\D/g, '');
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 8) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    if (digits.length <= 12) return `${digits.slice(0, 4)}-${digits.slice(4, 8)}-${digits.slice(8)}`;
+    return `${digits.slice(0, 4)}-${digits.slice(4, 8)}-${digits.slice(8, 12)}-${digits.slice(12, 16)}`;
+  };
+
+  const getDisplayValue = (key, value) => {
+    if (!value) return '';
+    
+    const isVisible = showBankDetails[key];
+    
+    if (key === 'cardNumber') {
+      const formatted = formatCardNumber(value);
+      return isVisible ? formatted : '••••-••••-••••-••••';
+    }
+    
+    if (key === 'cvv') {
+      return isVisible ? value : '•••';
+    }
+    
+    if (key === 'accountNumber') {
+      const strValue = value.toString();
+      if (isVisible) {
+        if (strValue.length <= 4) return strValue;
+        return `${'•'.repeat(strValue.length - 4)}${strValue.slice(-4)}`;
+      }
+      return '•'.repeat(Math.min(strValue.length, 12));
+    }
+    
+    return value;
+  };
+
+  const getFieldIcon = (key) => {
+    const icons = {
+      'accountNumber': '🔢',
+      'ifscCode': '🏦',
+      'branch': '🏢',
+      'accountType': '📊',
+      'customerId': '👤',
+      'cardNumber': '💳',
+      'cardExpiry': '📅',
+      'cvv': '🔒',
+    };
+    return icons[key] || '📝';
+  };
+
+  const getFieldLabel = (key) => {
+    const labels = {
+      'accountNumber': 'Account Number',
+      'ifscCode': 'IFSC Code',
+      'branch': 'Branch',
+      'accountType': 'Account Type',
+      'customerId': 'Customer ID',
+      'cardNumber': 'Card Number',
+      'cardExpiry': 'Card Expiry',
+      'cvv': 'CVV',
+    };
+    return labels[key] || key.replace(/([A-Z])/g, ' $1');
   };
 
   const isBankCategory = credential.category === 'Bank';
@@ -182,31 +267,52 @@ export const ViewModal = ({
               <label className="block text-xs font-medium text-gray-400 mb-2 flex items-center gap-2">
                 <span>🏦</span> Bank Account Details
               </label>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {Object.entries(credential.bankDetails).map(([key, value]) => 
                   value && (
                     <div key={key} className="flex justify-between items-center">
-                      <span className="text-xs text-gray-300 capitalize">
-                        {key === 'accountNumber' && '🔢 Account Number'}
-                        {key === 'ifscCode' && '🏦 IFSC Code'}
-                        {key === 'branch' && '🏢 Branch'}
-                        {key === 'accountType' && '📊 Account Type'}
-                        {key === 'customerId' && '👤 Customer ID'}
-                        {key === 'cardNumber' && '💳 Card Number'}
-                        {key === 'cardExpiry' && '📅 Card Expiry'}
-                        {key === 'cvv' && '🔒 CVV'}
-                        {!['accountNumber', 'ifscCode', 'branch', 'accountType', 'customerId', 'cardNumber', 'cardExpiry', 'cvv'].includes(key) && 
-                          key.replace(/([A-Z])/g, ' $1')}
-                      </span>
-                      <span className="text-xs text-white font-mono">
-                        {['cvv', 'cardNumber'].includes(key)
-                          ? '•'.repeat(value.toString().length)
-                          : value}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-300">
+                          {getFieldIcon(key)} {getFieldLabel(key)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-white font-mono">
+                          {getDisplayValue(key, value)}
+                        </span>
+                        {['cardNumber', 'cvv', 'accountNumber'].includes(key) ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => toggleBankDetailVisibility(key)}
+                              className="text-xs px-2 py-1 bg-gray-700/50 hover:bg-gray-700 rounded transition-colors"
+                            >
+                              {showBankDetails[key] ? '🙈' : '👁️'}
+                            </button>
+                            <button
+                              onClick={() => handleCopyBankDetail(key, value, getFieldLabel(key))}
+                              className="text-xs px-2 py-1 bg-primary/20 hover:bg-primary/30 text-primary rounded transition-colors"
+                            >
+                              📋
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleCopyBankDetail(key, value, getFieldLabel(key))}
+                            className="text-xs px-2 py-1 bg-primary/20 hover:bg-primary/30 text-primary rounded transition-colors ml-1"
+                          >
+                            📋
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )
                 )}
               </div>
+              {(showBankDetails.cardNumber || showBankDetails.cvv || showBankDetails.accountNumber) && (
+                <div className="mt-3 text-xs text-yellow-400">
+                  ⚠️ Sensitive details are visible. They will be hidden when you close this modal.
+                </div>
+              )}
             </div>
           )}
 
