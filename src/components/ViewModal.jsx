@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { categoryIcons } from '../utils/types';
+import { lockBodyScroll } from '../utils/bodyScrollLock';
 
 export const ViewModal = ({
   isOpen,
@@ -18,6 +20,11 @@ export const ViewModal = ({
     cvv: false,
     accountNumber: false
   });
+
+  useEffect(() => {
+    if (!isOpen || !credential) return undefined;
+    return lockBodyScroll();
+  }, [isOpen, credential]);
 
   if (!isOpen || !credential) return null;
 
@@ -143,8 +150,15 @@ export const ViewModal = ({
 
   const isBankCategory = credential.category === 'Bank';
 
-  return (
-    <div className="modal-overlay">
+  return createPortal(
+    <div className="modal-overlay" role="presentation" onClick={onClose}>
+      <div
+        className="modal-overlay-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="view-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
       <div className="modal-content max-w-lg">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -154,7 +168,7 @@ export const ViewModal = ({
               </span>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 id="view-modal-title" className="text-xl font-bold text-white">
                 {credential.serviceName}
               </h2>
               <p className="text-gray-400 text-sm">
@@ -170,7 +184,7 @@ export const ViewModal = ({
           </button>
         </div>
 
-        <div className="space-y-4 mb-6 max-h-[50vh] overflow-y-auto p-2">
+        <div className="space-y-4 mb-6">
           {/* Username/Email - Optional for Bank */}
           {credential.username && (
             <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4">
@@ -360,6 +374,8 @@ export const ViewModal = ({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body
   );
 };

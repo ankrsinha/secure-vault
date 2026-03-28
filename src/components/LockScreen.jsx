@@ -59,27 +59,28 @@ export const LockScreen = ({ onUnlock, onError }) => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-black to-gray-900">
-            <div className="modal-content w-full max-w-md">
-                <div className="text-center mb-8">
-                    <div className="inline-block p-4 bg-gradient-to-br from-primary to-cyan-600 rounded-2xl mb-6">
-                        <span className="text-5xl">🔐</span>
+        <div className="lock-screen-root">
+            <div className="lock-screen-card">
+                <header className="text-center mb-6 sm:mb-8">
+                    <div className="inline-flex items-center justify-center p-4 bg-gradient-to-br from-primary to-cyan-600 rounded-2xl mb-5 shadow-lg shadow-primary/20">
+                        <span className="text-5xl leading-none" aria-hidden>🔐</span>
                     </div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                    <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                         Secure Vault
                     </h1>
-                    <p className="text-gray-400 mt-2">
+                    <p className="text-gray-400 mt-2 text-sm sm:text-base">
                         {isCreating ? 'Create your secure vault' : 'Unlock your secure vault'}
                     </p>
-                </div>
+                </header>
 
-                <div className="space-y-6">
+                <div className="space-y-5 sm:space-y-6">
                     <div>
-                        <label className="block text-sm font-medium text-white mb-3">
+                        <label className="block text-sm font-medium text-white mb-2" htmlFor="lock-master-password">
                             Master Password
                         </label>
                         <div className="relative">
                             <input
+                                id="lock-master-password"
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -91,7 +92,8 @@ export const LockScreen = ({ onUnlock, onError }) => {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
                             >
                                 {showPassword ? '🙈' : '👁️'}
                             </button>
@@ -100,10 +102,11 @@ export const LockScreen = ({ onUnlock, onError }) => {
 
                     {isCreating && (
                         <div>
-                            <label className="block text-sm font-medium text-white mb-3">
+                            <label className="block text-sm font-medium text-white mb-2" htmlFor="lock-confirm-password">
                                 Confirm Password
                             </label>
                             <input
+                                id="lock-confirm-password"
                                 type={showPassword ? 'text' : 'password'}
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -114,55 +117,57 @@ export const LockScreen = ({ onUnlock, onError }) => {
                         </div>
                     )}
 
-                    <div className="flex gap-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                         <button
+                            type="button"
                             onClick={isCreating ? handleCreate : handleUnlock}
-                            className="btn-primary flex-1 py-4"
+                            className="btn-primary flex-1 py-3.5"
                         >
-                            <span className="text-xl">{isCreating ? '🔓' : '🔐'}</span>
+                            <span className="text-xl" aria-hidden>{isCreating ? '🔓' : '🔐'}</span>
                             <span>{isCreating ? 'Create Vault' : 'Unlock Vault'}</span>
                         </button>
                         <button
+                            type="button"
                             onClick={() => {
                                 setIsCreating(!isCreating);
                                 setPassword('');
                                 setConfirmPassword('');
                             }}
-                            className="btn-secondary flex-1 py-4"
+                            className="btn-secondary flex-1 py-3.5"
                         >
                             {isCreating ? 'Back to Login' : 'Create New Vault'}
                         </button>
                     </div>
 
-                    <div className="mt-6 p-5 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-2xl">
-                        <div className="flex items-start gap-3">
-                            <span className="text-2xl mt-1">🛡️</span>
-                            <div>
-                                <strong className="text-blue-300">Security Information:</strong>
-                                <ul className="mt-3 space-y-2 text-sm text-gray-300">
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-green-400">✓</span>
-                                        <span>All data encrypted locally with AES-256</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-green-400">✓</span>
-                                        <span>Master password never leaves your device</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-green-400">✓</span>
-                                        <span>Zero-knowledge architecture</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-yellow-400">⚠</span>
-                                        <span>Your master password cannot be recovered</span>
-                                    </li>
-                                </ul>
-                                <p className="text-xs text-gray-500 mt-4">
-                                    For enhanced security, use a password manager to store your master password
-                                </p>
-                            </div>
+                    <aside className="rounded-2xl border border-blue-500/25 bg-gradient-to-br from-blue-500/10 via-gray-900/40 to-cyan-500/5 p-4 sm:p-5">
+                        <div className="flex items-center gap-2.5 mb-3">
+                            <span className="text-2xl shrink-0" aria-hidden>🛡️</span>
+                            <h2 className="text-sm font-semibold text-blue-200 tracking-wide uppercase">
+                                Security
+                            </h2>
                         </div>
-                    </div>
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2.5 text-sm text-gray-300">
+                            <li className="flex gap-2 min-w-0">
+                                <span className="text-emerald-400 shrink-0" aria-hidden>✓</span>
+                                <span>AES-256 encryption on your device</span>
+                            </li>
+                            <li className="flex gap-2 min-w-0">
+                                <span className="text-emerald-400 shrink-0" aria-hidden>✓</span>
+                                <span>Master password never leaves this device</span>
+                            </li>
+                            <li className="flex gap-2 min-w-0 sm:col-span-2">
+                                <span className="text-emerald-400 shrink-0" aria-hidden>✓</span>
+                                <span>Zero-knowledge — we cannot read your data</span>
+                            </li>
+                            <li className="flex gap-2 min-w-0 sm:col-span-2 pt-1 border-t border-blue-500/15">
+                                <span className="text-amber-400 shrink-0" aria-hidden>⚠</span>
+                                <span className="text-gray-200">Your master password cannot be recovered if lost</span>
+                            </li>
+                        </ul>
+                        <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+                            Store your master password in a trusted password manager.
+                        </p>
+                    </aside>
                 </div>
             </div>
         </div>

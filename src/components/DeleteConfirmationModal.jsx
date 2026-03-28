@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { categoryIcons } from '../utils/types';
+import { lockBodyScroll } from '../utils/bodyScrollLock';
 
 export const DeleteConfirmationModal = ({
   isOpen,
@@ -7,14 +9,26 @@ export const DeleteConfirmationModal = ({
   onConfirm,
   onCancel,
 }) => {
+  useEffect(() => {
+    if (!isOpen || !credential) return undefined;
+    return lockBodyScroll();
+  }, [isOpen, credential]);
+
   if (!isOpen || !credential) return null;
 
-  return (
-    <div className="modal-overlay">
+  return createPortal(
+    <div className="modal-overlay" role="presentation" onClick={onCancel}>
+      <div
+        className="modal-overlay-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
       <div className="modal-content max-w-md">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">
+            <h2 id="delete-modal-title" className="text-2xl font-bold text-white">
               Confirm Delete
             </h2>
             <p className="text-gray-400 text-sm mt-1">
@@ -76,6 +90,8 @@ export const DeleteConfirmationModal = ({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body
   );
 };

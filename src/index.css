@@ -81,16 +81,49 @@
     @apply group;
   }
 
-  /* Enhanced Modal */
+  /* Enhanced Modal — fixed + portal; scroll on overlay; scrollbar hidden (wheel/touch still works) */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center 
-           p-4 z-50 animate-fade-in;
+    @apply fixed inset-0 z-[100] overflow-y-auto overflow-x-hidden
+           bg-black/80 backdrop-blur-sm animate-fade-in;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .modal-overlay::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .modal-overlay-panel {
+    @apply min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6;
   }
   
   .modal-content {
     @apply bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 
-           rounded-2xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto 
+           rounded-2xl p-8 max-w-md w-full animate-slide-up shadow-2xl shadow-black/30;
+  }
+
+  /* Entry screen: balanced width, no max-height — avoids inner scrollbars */
+  .lock-screen-card {
+    @apply relative max-h-none overflow-visible bg-gradient-to-br from-gray-900 to-gray-800 
+           border border-gray-700 rounded-2xl p-6 sm:p-8 max-w-lg w-full 
            animate-slide-up shadow-2xl shadow-black/30;
+  }
+
+  .lock-screen-root {
+    @apply min-h-[100dvh] flex items-center justify-center overflow-x-hidden px-4 py-6 
+           sm:py-8 bg-gradient-to-br from-gray-900 via-black to-gray-900;
+  }
+
+  @media (max-height: 44rem) {
+    .lock-screen-root {
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+    .lock-screen-card {
+      padding: 1.25rem 1.5rem;
+    }
   }
 
   /* Enhanced Status Messages */

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { categoryIcons, credentialCategories, bankCredentialTypes, bankSpecificFields } from '../utils/types';
+import { lockBodyScroll } from '../utils/bodyScrollLock';
 
 export const CredentialModal = ({
   isOpen,
@@ -193,16 +195,28 @@ export const CredentialModal = ({
     return credentialType ? credentialType.label : newBankCredential.type;
   };
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    return lockBodyScroll();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const isBankCategory = category === 'Bank';
 
-  return (
-    <div className="modal-overlay">
+  return createPortal(
+    <div className="modal-overlay" role="presentation" onClick={onClose}>
+      <div
+        className="modal-overlay-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="credential-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
       <div className="modal-content max-w-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">
+            <h2 id="credential-modal-title" className="text-2xl font-bold text-white">
               {isEditing ? 'Edit Credential' : 'Add New Credential'}
             </h2>
             <p className="text-gray-400 text-sm mt-1">
@@ -593,6 +607,8 @@ export const CredentialModal = ({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body
   );
 };
